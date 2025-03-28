@@ -213,6 +213,49 @@ function exportToPdf() {
         }
     });
     
+    // Add philosophy analysis section if available
+    if (typeof calculatePhilosophyMetrics === 'function') {
+        y = doc.lastAutoTable.finalY + 15;
+        
+        if (y > pageHeight - 50) {
+            doc.addPage();
+            y = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.text('Compensation Philosophy Analysis', 14, y);
+        y += 8;
+        
+        // Get philosophy metrics
+        const philosophyMetrics = calculatePhilosophyMetrics(
+            simulateElasticity(), 
+            generateRiskAssessment()
+        );
+        
+        // Create table for philosophy metrics
+        const philosophyColumns = ['Dimension', 'Score', 'Rating'];
+        const philosophyRows = [
+            ['Size of Prize', philosophyMetrics.sizeOfPrize.score + '/10', philosophyMetrics.sizeOfPrize.label],
+            ['Reward Distribution', philosophyMetrics.distribution.score + '/10', philosophyMetrics.distribution.label],
+            ['Psychological Mechanisms', philosophyMetrics.psychology.score + '/10', philosophyMetrics.psychology.label]
+        ];
+        
+        // Draw table
+        doc.autoTable({
+            head: [philosophyColumns],
+            body: philosophyRows,
+            startY: y,
+            theme: 'grid',
+            styles: {
+                cellPadding: 2,
+                fontSize: 8
+            },
+            headStyles: {
+                fillColor: [153, 102, 204]
+            }
+        });
+    }
+    
     // Save PDF
     doc.save('payout-simulator-results.pdf');
 }
@@ -305,6 +348,22 @@ function exportToCsv() {
         const rangeKey = elasticityRanges[i];
         
         csvContent += `${rangeNames[i]},${elasticityData[rangeKey].elasticity.toFixed(2)},${elasticityData[rangeKey].revenuePerPoint.toFixed(2)},${elasticityData[rangeKey].roi.toFixed(1)}:1\n`;
+    }
+    
+    // Philosophy analysis if available
+    if (typeof calculatePhilosophyMetrics === 'function') {
+        csvContent += '\nCompensation Philosophy Analysis\n';
+        csvContent += 'Dimension,Score,Rating\n';
+        
+        // Get philosophy metrics
+        const philosophyMetrics = calculatePhilosophyMetrics(
+            simulateElasticity(), 
+            generateRiskAssessment()
+        );
+        
+        csvContent += `Size of Prize,${philosophyMetrics.sizeOfPrize.score},${philosophyMetrics.sizeOfPrize.label}\n`;
+        csvContent += `Reward Distribution,${philosophyMetrics.distribution.score},${philosophyMetrics.distribution.label}\n`;
+        csvContent += `Psychological Mechanisms,${philosophyMetrics.psychology.score},${philosophyMetrics.psychology.label}\n`;
     }
     
     // Create download link

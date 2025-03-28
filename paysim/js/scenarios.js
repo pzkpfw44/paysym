@@ -10,12 +10,22 @@ let performanceProfiles = [];
 let selectedStructures = [];
 let selectedPerformances = [];
 
+// Make these variables available globally for the philosophy analysis
+window.payoutStructures = payoutStructures;
+window.performanceProfiles = performanceProfiles;
+window.selectedStructures = selectedStructures;
+window.selectedPerformances = selectedPerformances;
+
 /**
  * Initialize scenarios from localStorage
  */
 function initializeScenarios() {
     payoutStructures = JSON.parse(localStorage.getItem('payoutStructures') || '[]');
     performanceProfiles = JSON.parse(localStorage.getItem('performanceProfiles') || '[]');
+    
+    // Update global variables
+    window.payoutStructures = payoutStructures;
+    window.performanceProfiles = performanceProfiles;
     
     updateStructureList();
     updatePerformanceList();
@@ -111,7 +121,7 @@ function updatePerformanceList() {
 }
 
 /**
- * Update selectors for scenario comparison
+ * Update selectors for scenario comparison - IMPROVED VERSION
  */
 function updateSelectors() {
     // Update structure selector
@@ -121,20 +131,60 @@ function updateSelectors() {
     if (payoutStructures.length === 0) {
         structureSelector.innerHTML = '<p class="empty-message">No payout structures saved</p>';
     } else {
+        // Create a more compact list view container
+        const listContainer = document.createElement('div');
+        listContainer.className = 'selector-list-container';
+        structureSelector.appendChild(listContainer);
+        
+        // Add header for the list
+        const headerRow = document.createElement('div');
+        headerRow.className = 'selector-header-row';
+        headerRow.innerHTML = `
+            <div class="selector-cell cell-select">Select</div>
+            <div class="selector-cell cell-name">Structure Name</div>
+            <div class="selector-cell cell-details">Details</div>
+        `;
+        listContainer.appendChild(headerRow);
+        
+        // Add items in a compact list format
         payoutStructures.forEach((structure, index) => {
             const item = document.createElement('div');
-            item.className = 'selector-item';
+            item.className = 'selector-row' + (selectedStructures.includes(index) ? ' selected' : '');
             item.dataset.index = index;
-            item.textContent = structure.name;
             
-            // Check if this structure is selected
-            if (selectedStructures.includes(index)) {
-                item.classList.add('selected');
-            }
+            // Calculate some key metrics for display
+            const comTopRate = Math.max(...structure.commissionThresholds.map(t => t.percentage));
+            const qBonusMax = Math.max(...structure.quarterlyThresholds.map(t => t.bonus));
             
-            item.addEventListener('click', () => toggleStructureSelection(index, item));
+            item.innerHTML = `
+                <div class="selector-cell cell-select">
+                    <input type="checkbox" class="structure-checkbox" 
+                           ${selectedStructures.includes(index) ? 'checked' : ''}>
+                </div>
+                <div class="selector-cell cell-name">${structure.name}</div>
+                <div class="selector-cell cell-details">
+                    <span class="detail-tag">${structure.useRollingAverage ? 'Rolling Avg' : 'Monthly'}</span>
+                    <span class="detail-tag">Com: ${comTopRate}%</span>
+                    <span class="detail-tag">QB: €${qBonusMax}</span>
+                </div>
+            `;
             
-            structureSelector.appendChild(item);
+            // Add event listener to the checkbox
+            const checkbox = item.querySelector('.structure-checkbox');
+            checkbox.addEventListener('change', function(e) {
+                e.stopPropagation(); // Prevent row click from being triggered
+                toggleStructureSelection(index, item);
+            });
+            
+            // Add event listener to the row
+            item.addEventListener('click', function(e) {
+                if (e.target.type !== 'checkbox') {
+                    checkbox.checked = !checkbox.checked;
+                    toggleStructureSelection(index, item);
+                }
+            });
+            
+            listContainer.appendChild(item);
         });
     }
     
@@ -145,21 +195,63 @@ function updateSelectors() {
     if (performanceProfiles.length === 0) {
         performanceSelector.innerHTML = '<p class="empty-message">No performance profiles saved</p>';
     } else {
-        performanceProfiles.forEach((profile, index) => {
-            const item = document.createElement('div');
-            item.className = 'selector-item';
-            item.dataset.index = index;
-            item.textContent = profile.name;
+        // Create a compact list view container
+        const listContainer = document.createElement('div');
+        listContainer.className = 'selector-list-container';
+        performanceSelector.appendChild(listContainer);
+        
+        // Add header for the list
+        const headerRow = document.createElement('div');
+        headerRow.className = 'selector-header-row';
+        headerRow.innerHTML = `
+            <div class="selector-cell cell-select">Select</div>
+            <div class="selector-cell cell-name">Profile Name</div>
+            <div class="selector-cell cell-details">Performance</div>
+            <div class="selector-cell cell-fte">FTE</div>
+        `;
+        listContainer.appendChild(headerRow);
+        
+        // Add a paging system if there are many profiles
+        const itemsPerPage = 6;
+        const totalPages = Math.ceil(performanceProfiles.length / itemsPerPage);
+        
+        // Add pagination controls if needed
+        if (totalPages > 1) {
+            const paginationContainer = document.createElement('div');
+            paginationContainer.className = 'pagination-container';
+            paginationContainer.innerHTML = `
+                <button class="pagination-btn" id="prevPage" disabled>◀ Prev</button>
+                <span class="page-indicator">Page <span id="currentPage">1</span> of ${totalPages}</span>
+                <button class="pagination-btn" id="nextPage">Next ▶</button>
+            `;
+            performanceSelector.appendChild(paginationContainer);
             
-            // Check if this profile is selected
-            if (selectedPerformances.includes(index)) {
-                item.classList.add('selected');
-            }
+            // Add pagination event listeners
+            let currentPageNum = 1;
             
-            item.addEventListener('click', () => togglePerformanceSelection(index, item));
+            document.getElementById('prevPage').addEventListener('click', function() {
+                if (currentPageNum > 1) {
+                    currentPageNum--;
+                    updatePerformanceListPage(currentPageNum, listContainer, itemsPerPage);
+                    document.getElementById('currentPage').textContent = currentPageNum;
+                    document.getElementById('nextPage').disabled = false;
+                    this.disabled = currentPageNum === 1;
+                }
+            });
             
-            performanceSelector.appendChild(item);
-        });
+            document.getElementById('nextPage').addEventListener('click', function() {
+                if (currentPageNum < totalPages) {
+                    currentPageNum++;
+                    updatePerformanceListPage(currentPageNum, listContainer, itemsPerPage);
+                    document.getElementById('currentPage').textContent = currentPageNum;
+                    document.getElementById('prevPage').disabled = false;
+                    this.disabled = currentPageNum === totalPages;
+                }
+            });
+        }
+        
+        // Display first page of items
+        updatePerformanceListPage(1, listContainer, itemsPerPage);
     }
     
     // Update visibility of comparison elements
@@ -168,6 +260,66 @@ function updateSelectors() {
         document.getElementById('scenarioComparison').style.display = 'none';
     } else {
         document.getElementById('noScenariosMessage').style.display = 'none';
+    }
+    
+    // Update global variables for selected items
+    window.selectedStructures = selectedStructures;
+    window.selectedPerformances = selectedPerformances;
+}
+
+/**
+ * Update performance list for a specific page
+ */
+function updatePerformanceListPage(pageNum, container, itemsPerPage) {
+    // Clear existing item rows (but keep the header)
+    const header = container.querySelector('.selector-header-row');
+    container.innerHTML = '';
+    container.appendChild(header);
+    
+    // Calculate start and end indices
+    const startIdx = (pageNum - 1) * itemsPerPage;
+    const endIdx = Math.min(startIdx + itemsPerPage, performanceProfiles.length);
+    
+    // Add item rows for this page
+    for (let i = startIdx; i < endIdx; i++) {
+        const profile = performanceProfiles[i];
+        
+        const item = document.createElement('div');
+        item.className = 'selector-row' + (selectedPerformances.includes(i) ? ' selected' : '');
+        item.dataset.index = i;
+        
+        // Calculate average achievement
+        const avgAchievement = profile.quarterlyAchievements.reduce((a, b) => a + b, 0) / 4;
+        
+        item.innerHTML = `
+            <div class="selector-cell cell-select">
+                <input type="checkbox" class="performance-checkbox" 
+                       ${selectedPerformances.includes(i) ? 'checked' : ''}>
+            </div>
+            <div class="selector-cell cell-name">${profile.name}</div>
+            <div class="selector-cell cell-details">
+                <span class="detail-tag">Avg: ${avgAchievement.toFixed(0)}%</span>
+                <span class="detail-tag">${profile.quarterlyAchievements.join('% | ')}%</span>
+            </div>
+            <div class="selector-cell cell-fte">${profile.fte}</div>
+        `;
+        
+        // Add event listener to the checkbox
+        const checkbox = item.querySelector('.performance-checkbox');
+        checkbox.addEventListener('change', function(e) {
+            e.stopPropagation(); // Prevent row click from being triggered
+            togglePerformanceSelection(i, item);
+        });
+        
+        // Add event listener to the row
+        item.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox') {
+                checkbox.checked = !checkbox.checked;
+                togglePerformanceSelection(i, item);
+            }
+        });
+        
+        container.appendChild(item);
     }
 }
 
@@ -181,6 +333,9 @@ function toggleStructureSelection(index, element) {
         // Only allow up to 3 selections
         if (selectedStructures.length >= 3) {
             alert('You can select a maximum of 3 payout structures');
+            // Make sure the checkbox is unchecked
+            const checkbox = element.querySelector('.structure-checkbox');
+            if (checkbox) checkbox.checked = false;
             return;
         }
         
@@ -192,6 +347,9 @@ function toggleStructureSelection(index, element) {
         selectedStructures.splice(position, 1);
         element.classList.remove('selected');
     }
+    
+    // Update global variable
+    window.selectedStructures = selectedStructures;
 }
 
 /**
@@ -204,6 +362,9 @@ function togglePerformanceSelection(index, element) {
         // Only allow up to 12 selections
         if (selectedPerformances.length >= 12) {
             alert('You can select a maximum of 12 performance profiles');
+            // Make sure the checkbox is unchecked
+            const checkbox = element.querySelector('.performance-checkbox');
+            if (checkbox) checkbox.checked = false;
             return;
         }
         
@@ -215,6 +376,9 @@ function togglePerformanceSelection(index, element) {
         selectedPerformances.splice(position, 1);
         element.classList.remove('selected');
     }
+    
+    // Update global variable
+    window.selectedPerformances = selectedPerformances;
 }
 
 /**
@@ -286,6 +450,9 @@ function savePayoutStructure() {
     payoutStructures.push(structure);
     localStorage.setItem('payoutStructures', JSON.stringify(payoutStructures));
     
+    // Update global variable
+    window.payoutStructures = payoutStructures;
+    
     document.getElementById('structureName').value = '';
     updateStructureList();
     updateSelectors();
@@ -332,6 +499,9 @@ function savePerformanceProfile() {
     
     performanceProfiles.push(profile);
     localStorage.setItem('performanceProfiles', JSON.stringify(performanceProfiles));
+    
+    // Update global variable
+    window.performanceProfiles = performanceProfiles;
     
     document.getElementById('performanceName').value = '';
     updatePerformanceList();
@@ -383,6 +553,11 @@ function deletePayoutStructure(index) {
         
         payoutStructures.splice(index, 1);
         localStorage.setItem('payoutStructures', JSON.stringify(payoutStructures));
+        
+        // Update global variable
+        window.payoutStructures = payoutStructures;
+        window.selectedStructures = selectedStructures;
+        
         updateStructureList();
         updateSelectors();
     }
@@ -408,104 +583,14 @@ function deletePerformanceProfile(index) {
         
         performanceProfiles.splice(index, 1);
         localStorage.setItem('performanceProfiles', JSON.stringify(performanceProfiles));
+        
+        // Update global variable
+        window.performanceProfiles = performanceProfiles;
+        window.selectedPerformances = selectedPerformances;
+        
         updatePerformanceList();
         updateSelectors();
     }
-}
-
-/**
- * Run comparison between selected structures and performances
- */
-function runScenarioComparison() {
-    if (selectedStructures.length === 0 || selectedPerformances.length === 0) {
-        alert('Please select at least one payout structure and one performance profile to compare');
-        return;
-    }
-    
-    // Get selected structures and performances
-    const structures = selectedStructures.map(index => payoutStructures[index]);
-    const performances = selectedPerformances.map(index => performanceProfiles[index]);
-    
-    // Run comparison
-    const results = runComparison(structures, performances);
-    
-    // Show comparison results
-    document.getElementById('scenarioComparison').style.display = 'block';
-    
-    // Update comparison chart
-    updateComparisonChart(results);
-    
-    // Update comparison table
-    updateComparisonTable(results);
-    
-    // Store original form state to restore after comparison
-    const originalState = saveCurrentState();
-    
-    // Restore original state after comparison
-    restoreState(originalState);
-}
-
-/**
- * Update comparison chart with results
- */
-function updateComparisonChart(results) {
-    // Create labels combining structure and performance names
-    const labels = results.map(r => `${r.structureName} / ${r.performanceName}`);
-    
-    // Extract commission, quarterly bonus, and continuity bonus data
-    const commissionData = results.map(r => r.results.totalCommission);
-    const quarterlyBonusData = results.map(r => r.results.totalQuarterlyBonus);
-    const continuityBonusData = results.map(r => r.results.totalContinuityBonus);
-    
-    // Update chart data
-    comparisonChart.data.labels = labels;
-    comparisonChart.data.datasets[0].data = commissionData;
-    comparisonChart.data.datasets[1].data = quarterlyBonusData;
-    comparisonChart.data.datasets[2].data = continuityBonusData;
-    comparisonChart.update();
-}
-
-/**
- * Update comparison table with results
- */
-function updateComparisonTable(results) {
-    const tbody = document.getElementById('comparisonTableBody');
-    tbody.innerHTML = '';
-    
-    results.forEach(result => {
-        const row = document.createElement('tr');
-        
-        const structureCell = document.createElement('td');
-        structureCell.textContent = result.structureName;
-        
-        const performanceCell = document.createElement('td');
-        performanceCell.textContent = result.performanceName;
-        
-        const achievementCell = document.createElement('td');
-        achievementCell.textContent = formatPercent(result.results.avgAchievement);
-        
-        const totalPayoutCell = document.createElement('td');
-        totalPayoutCell.textContent = formatCurrency(result.results.totalPayout);
-        
-        const commissionCell = document.createElement('td');
-        commissionCell.textContent = formatCurrency(result.results.totalCommission);
-        
-        const quarterlyBonusCell = document.createElement('td');
-        quarterlyBonusCell.textContent = formatCurrency(result.results.totalQuarterlyBonus);
-        
-        const continuityBonusCell = document.createElement('td');
-        continuityBonusCell.textContent = formatCurrency(result.results.totalContinuityBonus);
-        
-        row.appendChild(structureCell);
-        row.appendChild(performanceCell);
-        row.appendChild(achievementCell);
-        row.appendChild(totalPayoutCell);
-        row.appendChild(commissionCell);
-        row.appendChild(quarterlyBonusCell);
-        row.appendChild(continuityBonusCell);
-        
-        tbody.appendChild(row);
-    });
 }
 
 /**
@@ -640,3 +725,32 @@ function restoreState(state) {
     // Update yearly target
     updateYearlyTarget();
 }
+
+/**
+ * Fix the collapsible sections to properly show state
+ */
+function fixCollapsibleArrows() {
+    document.querySelectorAll('.collapsible').forEach(collapsible => {
+        const content = document.getElementById(collapsible.id.replace('Toggle', 'Content'));
+        
+        // If content is not expanded, mark as collapsed
+        if (!content.classList.contains('expanded')) {
+            collapsible.classList.add('collapsed');
+        } else {
+            collapsible.classList.remove('collapsed');
+        }
+        
+        // Update handler to toggle classes properly
+        collapsible.onclick = function() {
+            this.classList.toggle('collapsed');
+            const contentElement = document.getElementById(this.id.replace('Toggle', 'Content'));
+            contentElement.classList.toggle('expanded');
+        };
+    });
+}
+
+// Call this function after the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize collapsible arrows correctly after a short delay
+    setTimeout(fixCollapsibleArrows, 200);
+});

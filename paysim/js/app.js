@@ -24,8 +24,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Calculate yearly target from monthly sales
     updateYearlyTarget();
     
+    // Initialize philosophy events
+    if (typeof initializePhilosophyEvents === 'function') {
+        initializePhilosophyEvents();
+    }
+    
     // Initial calculation
     document.getElementById('calculateBtn').click();
+
+    // Initialize radar chart legend tooltips after page load
+    setTimeout(initializeRadarChartLegend, 500);
 });
 
 /**
@@ -45,7 +53,7 @@ function initializeCollapsibles() {
  * Initialize tabs
  */
 function initializeTabs() {
-    document.querySelectorAll('.tabs:not(.scenario-tabs) .tab').forEach(tab => {
+    document.querySelectorAll('.tabs:not(.scenario-tabs):not(.philosophy-tabs) .tab').forEach(tab => {
         tab.addEventListener('click', function() {
             // Get the parent tabs container
             const tabsContainer = this.closest('.tabs');
@@ -359,6 +367,20 @@ function setupEventListeners() {
         // Update risk analysis
         updateRiskAnalysis();
     });
+
+    // Base salary change event
+    document.getElementById('baseSalary').addEventListener('change', function() {
+        // Recalculate if on Model Effectiveness tab
+        if (document.getElementById('effectivenessTab').classList.contains('active')) {
+            updatePhilosophyAnalysis();
+        }
+    });
+
+    // When clicking on the effectiveness tab, ensure analysis is updated
+    document.querySelector('.tab[data-tab="effectiveness"]').addEventListener('click', function() {
+        // Update philosophy analysis if needed
+        updatePhilosophyAnalysis();
+    });
     
     // Rolling average checkbox
     document.getElementById('useRollingAverage').addEventListener('change', function() {
@@ -506,4 +528,86 @@ function validateQuarterlyWeights() {
     } else {
         warningElement.style.display = 'none';
     }
+}
+
+/**
+ * Initialize the radar chart legend tooltips
+ */
+function initializeRadarChartLegend() {
+    // Add tooltips to the radar chart legend items
+    const legendItems = document.querySelectorAll('#radarChartLegend li strong');
+    
+    legendItems.forEach(item => {
+        item.parentElement.style.cursor = 'pointer';
+        item.parentElement.addEventListener('mouseover', function() {
+            this.style.backgroundColor = 'rgba(210, 0, 75, 0.1)';
+        });
+        item.parentElement.addEventListener('mouseout', function() {
+            this.style.backgroundColor = 'transparent';
+        });
+    });
+}
+
+/**
+ * Run scenario comparison with elasticity deep dive
+ */
+function runScenarioComparison() {
+    if (selectedStructures.length === 0 || selectedPerformances.length === 0) {
+        alert('Please select at least one payout structure and one performance profile to compare');
+        return;
+    }
+    
+    // Get selected structures and performances
+    const structures = selectedStructures.map(index => payoutStructures[index]);
+    const performances = selectedPerformances.map(index => performanceProfiles[index]);
+    
+    // Run comparison
+    const results = runComparison(structures, performances);
+    
+    // Show comparison results
+    document.getElementById('scenarioComparison').style.display = 'block';
+    
+    // Update comparison chart
+    updateComparisonChart(results);
+    
+    // Update comparison table
+    updateComparisonTable(results);
+    
+    // If more than one structure is selected, show elasticity comparison
+    if (structures.length > 1) {
+        // Compare elasticity
+        const elasticityComparison = compareElasticity(structures, performances[0]);
+        
+        // Update elasticity comparison chart
+        updateElasticityComparisonChart(elasticityComparison);
+    } else {
+        // Hide elasticity comparison container
+        document.getElementById('elasticityComparisonContainer').style.display = 'none';
+    }
+    
+    // Store original form state to restore after comparison
+    const originalState = saveCurrentState();
+    
+    // Restore original state after comparison
+    restoreState(originalState);
+}
+
+/**
+ * Update comparison chart with results
+ */
+function updateComparisonChart(results) {
+    // Create labels combining structure and performance names
+    const labels = results.map(r => `${r.structureName} / ${r.performanceName}`);
+    
+    // Extract commission, quarterly bonus, and continuity bonus data
+    const commissionData = results.map(r => r.results.totalCommission);
+    const quarterlyBonusData = results.map(r => r.results.totalQuarterlyBonus);
+    const continuityBonusData = results.map(r => r.results.totalContinuityBonus);
+    
+    // Update chart data
+    comparisonChart.data.labels = labels;
+    comparisonChart.data.datasets[0].data = commissionData;
+    comparisonChart.data.datasets[1].data = quarterlyBonusData;
+    comparisonChart.data.datasets[2].data = continuityBonusData;
+    comparisonChart.update();
 }

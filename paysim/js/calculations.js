@@ -195,17 +195,42 @@ function calculateTotalPayout(quarterlies, monthlySales, fte) {
 }
 
 /**
- * Simulate elasticity across achievement levels
+ * Simulate elasticity across achievement levels using normalized values
+ * based on quarterly achievement percentages
  */
 function simulateElasticity() {
     const fte = parseFloat(document.getElementById('fte').value);
-    const results = [];
+    let results = [];
+    
+    // Get quarterly achievements for normalization
+    const quarterlyAchievements = [
+        parseFloat(document.getElementById('q1Achievement').value),
+        parseFloat(document.getElementById('q2Achievement').value),
+        parseFloat(document.getElementById('q3Achievement').value),
+        parseFloat(document.getElementById('q4Achievement').value)
+    ];
     
     // Get base monthly sales
-    const baseMonthlySales = [];
+    const actualMonthlySales = [];
     for (let j = 1; j <= 12; j++) {
         const salesInput = document.getElementById(`m${j}Sales`);
-        baseMonthlySales.push(parseFloat(salesInput.value));
+        actualMonthlySales.push(parseFloat(salesInput.value));
+    }
+    
+    // Normalize monthly sales to 100% achievement
+    const normalizedMonthlySales = [];
+    
+    // Apply quarterly normalization - each month gets normalized by its quarter's achievement
+    for (let q = 0; q < 4; q++) {
+        const quarterAchievement = quarterlyAchievements[q] / 100; // Convert to decimal
+        for (let m = 0; m < 3; m++) {
+            const monthIndex = q * 3 + m;
+            if (quarterAchievement > 0) {
+                normalizedMonthlySales[monthIndex] = actualMonthlySales[monthIndex] / quarterAchievement;
+            } else {
+                normalizedMonthlySales[monthIndex] = actualMonthlySales[monthIndex];
+            }
+        }
     }
     
     // Get rolling average option
@@ -217,12 +242,12 @@ function simulateElasticity() {
         parseFloat(document.getElementById('previousMonth2').value)
     ];
     
-    // Simulate from 0% to 200% in 5% increments
-    for (let i = 0; i <= 40; i++) {
-        const achievement = i * 5;
+    // Simulate from 0% to 200% in 1% increments for more precision
+    for (let i = 0; i <= 200; i++) {
+        const achievement = i;
         
-        // Scale monthly sales by achievement percentage
-        const scaledMonthlySales = baseMonthlySales.map(sales => sales * achievement / 100);
+        // Scale normalized monthly sales by achievement percentage
+        const scaledMonthlySales = normalizedMonthlySales.map(sales => sales * achievement / 100);
         
         // Calculate quarterly bonus for this achievement level
         const quarterlyBonus = calculateQuarterlyBonus(achievement, fte) * 4; // For 4 quarters
@@ -255,6 +280,37 @@ function simulateROI() {
     const fte = parseFloat(document.getElementById('fte').value);
     const results = [];
     
+    // Get quarterly achievements for normalization
+    const quarterlyAchievements = [
+        parseFloat(document.getElementById('q1Achievement').value),
+        parseFloat(document.getElementById('q2Achievement').value),
+        parseFloat(document.getElementById('q3Achievement').value),
+        parseFloat(document.getElementById('q4Achievement').value)
+    ];
+    
+    // Get base monthly sales
+    const actualMonthlySales = [];
+    for (let j = 1; j <= 12; j++) {
+        const salesInput = document.getElementById(`m${j}Sales`);
+        actualMonthlySales.push(parseFloat(salesInput.value));
+    }
+    
+    // Normalize monthly sales to 100% achievement
+    const normalizedMonthlySales = [];
+    
+    // Apply quarterly normalization - each month gets normalized by its quarter's achievement
+    for (let q = 0; q < 4; q++) {
+        const quarterAchievement = quarterlyAchievements[q] / 100; // Convert to decimal
+        for (let m = 0; m < 3; m++) {
+            const monthIndex = q * 3 + m;
+            if (quarterAchievement > 0) {
+                normalizedMonthlySales[monthIndex] = actualMonthlySales[monthIndex] / quarterAchievement;
+            } else {
+                normalizedMonthlySales[monthIndex] = actualMonthlySales[monthIndex];
+            }
+        }
+    }
+    
     // Get rolling average option
     const useRollingAverage = document.getElementById('useRollingAverage').checked;
     
@@ -274,15 +330,8 @@ function simulateROI() {
         // Calculate payout for this achievement level
         const quarterlyBonus = calculateQuarterlyBonus(achievement, fte) * 4; // For 4 quarters
         
-        // Get base monthly sales
-        const baseMonthlySales = [];
-        for (let j = 1; j <= 12; j++) {
-            const salesInput = document.getElementById(`m${j}Sales`);
-            baseMonthlySales.push(parseFloat(salesInput.value));
-        }
-        
-        // Scale monthly sales by achievement percentage
-        const scaledMonthlySales = baseMonthlySales.map(sales => sales * achievement / 100);
+        // Scale normalized monthly sales by achievement percentage
+        const scaledMonthlySales = normalizedMonthlySales.map(sales => sales * achievement / 100);
         
         // Calculate commission for the scaled sales - pass full scaledMonthlySales array
         const commissionsForElasticity = scaledMonthlySales.map((m, index) => 
@@ -553,11 +602,19 @@ function runComparison(structures, performances) {
             // Calculate the results
             const calculationResults = calculateTotalPayout(quarterlies, monthlySales, fte);
             
+            // Calculate elasticity metrics
+            const elasticityData = simulateElasticity();
+            const rangeResults = calculateElasticityPerRange();
+            
             // Store the results with structure and performance names
             results.push({
                 structureName: structure.name,
                 performanceName: performance.name,
-                results: calculationResults
+                results: calculationResults,
+                elasticity: elasticityData,
+                elasticityRanges: rangeResults,
+                structureData: structure,
+                performanceData: performance
             });
         });
     });
@@ -635,4 +692,74 @@ function applyPerformanceProfile(profile) {
     // Update yearly target (hidden)
     document.getElementById('yearlyTarget').value = profile.yearlyTarget;
     document.getElementById('yearlyTargetDisplay').value = profile.yearlyTarget.toLocaleString('de-DE');
+}
+
+/**
+ * Compare the elasticity of different payout structures
+ */
+function compareElasticity(structures, performances) {
+    // For simplicity, we'll use just one performance profile to compare structures
+    const performance = performances[0];
+    const results = [];
+    
+    // For each payout structure
+    structures.forEach(structure => {
+        // Apply the payout structure settings
+        applyPayoutStructure(structure);
+        
+        // Apply the performance profile settings
+        applyPerformanceProfile(performance);
+        
+        // Get elasticity data
+        const elasticityData = simulateElasticity();
+        
+        results.push({
+            structureName: structure.name,
+            elasticity: elasticityData
+        });
+    });
+    
+    return results;
+}
+
+/**
+ * Calculate total compensation metrics
+ */
+function calculateTotalCompensation() {
+    // Get base salary
+    const baseSalary = parseFloat(document.getElementById('baseSalary').value) || 0;
+    
+    // Get elasticity data for target payout (100% achievement)
+    const elasticityData = simulateElasticity();
+    const targetPayout = elasticityData.find(d => d.achievement === 100)?.totalExcludingContinuity || 0;
+    
+    // Calculate target total compensation
+    const targetTotalComp = baseSalary + targetPayout;
+    
+    // Calculate variable percentage
+    const variablePercentage = targetTotalComp > 0 ? (targetPayout / targetTotalComp) * 100 : 0;
+    
+    // Calculate pay mix ratio
+    const payMixRatio = baseSalary > 0 ? (targetPayout / baseSalary) * 100 : 0;
+    
+    return {
+        baseSalary,
+        targetVariable: targetPayout,
+        targetTotalComp,
+        variablePercentage,
+        payMixRatio
+    };
+}
+
+/**
+ * Get typicality indicator for a value
+ * @param {number} value - The value to check
+ * @param {number} lowerBound - Lower bound of typical range
+ * @param {number} upperBound - Upper bound of typical range
+ * @returns {string} - 'below', 'typical', or 'above'
+ */
+function getTypicalityIndicator(value, lowerBound, upperBound) {
+    if (value < lowerBound) return 'below';
+    if (value > upperBound) return 'above';
+    return 'typical';
 }

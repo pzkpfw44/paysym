@@ -6,6 +6,7 @@
 let targetAchievementGauge, totalPayoutGauge, monthlyBreakdownChart, elasticityChart;
 let comparisonChart, roiChart, riskChart;
 let annualPayoutComposition, quarterlyComparisonChart;
+let elasticityComparisonChart;
 
 function initializeCharts() {
     // Target Achievement Gauge
@@ -427,6 +428,59 @@ function initializeCharts() {
         }
     );
     
+    // Elasticity Comparison Chart
+    elasticityComparisonChart = new Chart(
+        document.getElementById('elasticityComparisonChart'),
+        {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 41}, (_, i) => (i * 5) + '%'),
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Payout (€)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '€' + value.toLocaleString('de-DE');
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Target Achievement (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += formatCurrency(context.raw);
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    );
+    
     // ROI Chart
     roiChart = new Chart(
         document.getElementById('roiChart'),
@@ -592,6 +646,11 @@ function initializeCharts() {
             }
         }
     );
+    
+    // Initialize philosophy charts
+    if (typeof initializePhilosophyCharts === 'function') {
+        initializePhilosophyCharts();
+    }
 }
 
 /**
@@ -680,6 +739,11 @@ function updateUI(results) {
     monthlyBreakdownChart.data.datasets[1].data = quarterlyBonusData;
     monthlyBreakdownChart.data.datasets[2].data = continuityBonusData;
     monthlyBreakdownChart.update();
+    
+    // If philosophy analysis is available, update it
+    if (typeof updatePhilosophyAnalysis === 'function') {
+        updatePhilosophyAnalysis();
+    }
 }
 
 /**
@@ -834,4 +898,40 @@ function updateRiskAnalysis() {
     
     riskChart.data.datasets[0].data = riskPayouts;
     riskChart.update();
+}
+
+/**
+ * Update comparison chart with elasticity data
+ * @param {Array} elasticityComparison - Elasticity data for different structures
+ */
+function updateElasticityComparisonChart(elasticityComparison) {
+    // Clear existing datasets
+    elasticityComparisonChart.data.datasets = [];
+    
+    // Define colors
+    const colors = [
+        { color: '#d2004b', light: 'rgba(210, 0, 75, 0.1)' },
+        { color: '#009988', light: 'rgba(0, 153, 136, 0.1)' },
+        { color: '#0066cc', light: 'rgba(0, 102, 204, 0.1)' }
+    ];
+    
+    // Add datasets
+    elasticityComparison.forEach((data, index) => {
+        const colorSet = colors[index % colors.length];
+        
+        elasticityComparisonChart.data.datasets.push({
+            label: data.structureName,
+            data: data.elasticity.map(d => d.totalExcludingContinuity),
+            borderColor: colorSet.color,
+            backgroundColor: colorSet.light,
+            borderWidth: 2,
+            fill: false
+        });
+    });
+    
+    // Update chart
+    elasticityComparisonChart.update();
+    
+    // Show the container
+    document.getElementById('elasticityComparisonContainer').style.display = 'block';
 }

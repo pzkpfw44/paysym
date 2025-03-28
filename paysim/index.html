@@ -356,6 +356,12 @@
                     <h3 class="section-title collapsible" id="basicParamsToggle">Basic Parameters</h3>
                     <div class="collapse-content expanded" id="basicParamsContent">
                         <div class="form-group">
+                            <label for="baseSalary">Annual Base Salary (€)</label>
+                            <input type="number" id="baseSalary" value="50000" min="0">
+                            <div class="help-text">Fixed annual compensation not tied to performance</div>
+                        </div>
+                        
+                        <div class="form-group">
                             <label for="fte">FTE Value (0.7-1.0)</label>
                             <input type="number" id="fte" value="1.0" min="0.7" max="1.0" step="0.1">
                         </div>
@@ -469,6 +475,7 @@
                     <div class="tab" data-tab="comparison">Scenario Comparison</div>
                     <div class="tab" data-tab="roi">ROI Analysis</div>
                     <div class="tab" data-tab="risk">Risk Analysis</div>
+                    <div class="tab" data-tab="effectiveness">Model Effectiveness</div>
                 </div>
                 
                 <div class="tab-content active" id="resultsTab">
@@ -663,7 +670,10 @@
                             </div>
                         </div>
                         
-                        <button id="runComparisonBtn" class="button-primary">Run Comparison</button>
+                        <div class="selector-actions">
+                            <button id="runComparisonBtn" class="button-primary">Run Comparison</button>
+                            <button id="deepAnalysisBtn" class="button-secondary">Deep Analysis</button>
+                        </div>
                     </div>
                     
                     <div id="noScenariosMessage">
@@ -673,6 +683,11 @@
                     <div id="scenarioComparison" style="display: none;">
                         <div id="comparisonChartContainer" class="chart-container" style="height: 400px;">
                             <canvas id="comparisonChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container" style="height: 300px; margin-top: 20px; display: none;" id="elasticityComparisonContainer">
+                            <h3>Elasticity Comparison</h3>
+                            <canvas id="elasticityComparisonChart"></canvas>
                         </div>
                         
                         <table class="comparison-table" id="comparisonTable">
@@ -822,20 +837,286 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- New Model Effectiveness Tab (renamed from Philosophy) -->
+                <div class="tab-content" id="effectivenessTab">
+                    <h2>Model Effectiveness Analysis</h2>
+                    
+                    <div class="executive-summary-section">
+                        <h3>Executive Summary</h3>
+                        <div class="summary-content" id="executiveSummary">
+                            Loading effectiveness analysis...
+                        </div>
+                    </div>
+                    
+                    <!-- COMPLETE PHILOSOPHY ANALYSIS SECTION HTML -->
+<div class="philosophy-container">
+    <div class="executive-summary-section">
+        <h3>Executive Summary</h3>
+        <div class="summary-content" id="executiveSummary">
+            Loading effectiveness analysis...
+        </div>
+    </div>
+    
+    <div class="philosophy-profile-section">
+        <h3>Model Effectiveness Profile</h3>
+        <div class="radar-chart-container">
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="philosophyRadarChart"></canvas>
+            </div>
+            <div class="radar-chart-legend" id="radarChartLegend">
+                <h4>How to Read This Chart</h4>
+                <p>This radar chart shows how your model performs across six key dimensions of compensation effectiveness:</p>
+                <ul>
+                    <li><strong>Size of Prize</strong>: Overall magnitude of potential variable compensation.</li>
+                    <li><strong>Below Target Support</strong>: Incentives available for underperforming periods.</li>
+                    <li><strong>At Target Incentive</strong>: Strength of motivation to hit 100% exactly.</li>
+                    <li><strong>Above Target Stretch</strong>: Reward for exceeding target expectations.</li>
+                    <li><strong>Near-Miss Psychology</strong>: Psychological tension when approaching target.</li>
+                    <li><strong>Psychological Distance</strong>: Optimal spacing between achievement thresholds.</li>
+                </ul>
+                <p>Higher scores (further from center) indicate stronger effectiveness in that dimension.</p>
+            </div>
+        </div>
+        
+        <div class="profile-metrics">
+            <div class="profile-metric">
+                <h4>Size of Prize</h4>
+                <div class="rating-display">
+                    <div class="rating-score" id="sizeOfPrizeScore">0</div>
+                    <div class="rating-label" id="sizeOfPrizeLabel">Moderate</div>
+                </div>
+                <div class="rating-description" id="sizeOfPrizeDescription">
+                    Analysis of overall compensation magnitude
+                </div>
+            </div>
+            
+            <div class="profile-metric">
+                <h4>Reward Distribution</h4>
+                <div class="rating-display">
+                    <div class="rating-score" id="rewardDistributionScore">0</div>
+                    <div class="rating-label" id="rewardDistributionLabel">Balanced</div>
+                </div>
+                <div class="rating-description" id="rewardDistributionDescription">
+                    How rewards are allocated across achievement levels
+                </div>
+            </div>
+            
+            <div class="profile-metric">
+                <h4>Psychological Mechanisms</h4>
+                <div class="rating-display">
+                    <div class="rating-score" id="psychMechanismsScore">0</div>
+                    <div class="rating-label" id="psychMechanismsLabel">Moderate</div>
+                </div>
+                <div class="rating-description" id="psychMechanismsDescription">
+                    Effective use of behavioral motivation triggers
+                </div>
             </div>
         </div>
     </div>
+    
+    <div class="philosophy-analysis-section">
+        <div class="tabs philosophy-tabs">
+            <div class="tab active" data-tab="prizeAnalysis">Size of Prize</div>
+            <div class="tab" data-tab="distributionAnalysis">Reward Distribution</div>
+            <div class="tab" data-tab="psychologyAnalysis">Psychology</div>
+            <div class="tab" data-tab="recommendations">Recommendations</div>
+        </div>
+        
+        <div class="tab-content active" id="prizeAnalysisTab">
+            <h3>Size of Prize Analysis</h3>
+            <div class="total-compensation-section">
+                <h4>Pay Mix Analysis</h4>
+                <div class="pay-mix-metrics">
+                    <div class="pay-mix-metric">
+                        <div class="metric-title">Base Salary</div>
+                        <div class="metric-value" id="baseSalaryValue">€0</div>
+                    </div>
+                    <div class="pay-mix-metric">
+                        <div class="metric-title">Target Variable</div>
+                        <div class="metric-value" id="targetVariableValue">€0</div>
+                    </div>
+                    <div class="pay-mix-metric">
+                        <div class="metric-title">Target Total Comp</div>
+                        <div class="metric-value" id="targetTotalCompValue">€0</div>
+                    </div>
+                    <div class="pay-mix-metric">
+                        <div class="metric-title">Variable/Base Ratio</div>
+                        <div class="metric-value" id="payMixRatioValue">0%</div>
+                        <div class="typicality-indicator" id="payMixTypicality"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="prize-ladder-container">
+                <h4>Payout Ladder Visualization</h4>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="prizeLadderChart"></canvas>
+                </div>
+                <div class="prize-analysis" id="prizeLadderAnalysis">
+                    <p>This visualization shows the total payout at different achievement levels.</p>
+                </div>
+            </div>
+            
+            <div class="prize-metrics">
+                <div class="prize-metric">
+                    <div class="metric-title">Maximum Potential</div>
+                    <div class="metric-value" id="maxPotentialValue">€0</div>
+                    <div class="metric-description">Maximum achievable payout at 200% achievement</div>
+                </div>
+                
+                <div class="prize-metric">
+                    <div class="metric-title">Target Multiple</div>
+                    <div class="metric-value" id="targetMultipleValue">0x</div>
+                    <div class="metric-description">Ratio of max payout to target payout</div>
+                    <div class="typicality-indicator" id="targetMultipleTypicality"></div>
+                </div>
+                
+                <div class="prize-metric">
+                    <div class="metric-title">Relative Size</div>
+                    <div class="metric-value" id="relativeSizeValue">0%</div>
+                    <div class="metric-description">Target payout as % of revenue</div>
+                    <div class="typicality-indicator" id="relativeSizeTypicality"></div>
+                </div>
+            </div>
+            
+            <div class="prize-insight insight-box" id="prizeInsight">
+                <h4>Size of Prize Insights</h4>
+                <p id="prizeInsightText">Analyzing the overall magnitude of the compensation package...</p>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="distributionAnalysisTab">
+            <h3>Reward Distribution Analysis</h3>
+            <div class="distribution-chart-container">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="distribution-metrics">
+                <div class="distribution-metric">
+                    <div class="metric-title">Below Target Share</div>
+                    <div class="metric-value" id="belowTargetShare">0%</div>
+                    <div class="metric-description">% of max potential available below 100%</div>
+                    <div class="typicality-indicator" id="belowTargetTypicality"></div>
+                </div>
+                
+                <div class="distribution-metric">
+                    <div class="metric-title">At Target Share</div>
+                    <div class="metric-value" id="atTargetShare">0%</div>
+                    <div class="metric-description">% of max potential at 100%</div>
+                    <div class="typicality-indicator" id="atTargetTypicality"></div>
+                </div>
+                
+                <div class="distribution-metric">
+                    <div class="metric-title">Above Target Share</div>
+                    <div class="metric-value" id="aboveTargetShare">0%</div>
+                    <div class="metric-description">% of max potential above 100%</div>
+                    <div class="typicality-indicator" id="aboveTargetTypicality"></div>
+                </div>
+            </div>
+            
+            <div class="distribution-insight insight-box" id="distributionInsight">
+                <h4>Distribution Insights</h4>
+                <p>Analyzing how compensation is allocated across performance levels...</p>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="psychologyAnalysisTab">
+            <h3>Psychological Mechanism Analysis</h3>
+            <div class="psychology-chart-container">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="psychologyChart"></canvas>
+                </div>
+                <div class="psychology-chart-legend">
+                    <h4>Understanding This Chart</h4>
+                    <p>This chart shows the incremental payout increase at each percentage point of achievement from 90% to 105%.</p>
+                    <p>Key points:</p>
+                    <ul>
+                        <li>Each bar represents how much additional compensation is earned by moving up exactly 1% in achievement</li>
+                        <li>The <strong style="color:#d2004b">red bar at 100%</strong> highlights the "psychological jump" at target achievement</li>
+                        <li>Larger jumps create stronger motivation to reach that specific threshold</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="psychology-metrics">
+                <div class="psychology-metric">
+                    <div class="metric-title">Near-Miss Incentive</div>
+                    <div class="metric-value" id="nearMissValue">Weak</div>
+                    <div class="metric-description">Effectiveness of 90-99% achievement incentives</div>
+                </div>
+                
+                <div class="psychology-metric">
+                    <div class="metric-title">Target Attainment Jump</div>
+                    <div class="metric-value" id="targetJumpValue">€0</div>
+                    <div class="metric-description">Payout increase from 99% to 100%</div>
+                    <div class="typicality-indicator" id="targetJumpTypicality"></div>
+                </div>
+                
+                <div class="psychology-metric">
+                    <div class="metric-title">Psychological Distance</div>
+                    <div class="metric-value" id="psychDistanceValue">High</div>
+                    <div class="metric-description">Perceived attainability of next threshold</div>
+                </div>
+            </div>
+            
+            <div class="psychology-insight insight-box" id="psychologyInsight">
+                <h4>Psychological Insights</h4>
+                <p>Analyzing how the compensation model leverages behavioral motivation triggers...</p>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="recommendationsTab">
+            <h3>Recommendations</h3>
+            
+            <!-- Moved to the top for better visibility -->
+            <div class="recommendations-goal-selector">
+                <label for="recommendationGoal">Optimization Goal:</label>
+                <select id="recommendationGoal">
+                    <option value="overall">Improve Overall Effectiveness</option>
+                    <option value="target">Motivate Target Achievement</option>
+                    <option value="topPerformers">Reward Top Performers</option>
+                    <option value="balance">Balance Performance Risk</option>
+                </select>
+                <div class="recommendations-goal-info">
+                    Select a specific optimization goal to focus the recommendations on your most important priorities.
+                    Different goals may require trade-offs in other areas of the compensation model.
+                </div>
+            </div>
+            
+            <div id="modelComparisonContainer">
+                <h3>Expected Impact</h3>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="recommendationComparisonChart"></canvas>
+                </div>
+            </div>
+            
+            <div id="recommendationsContainer">
+                <!-- Recommendations will be inserted here -->
+            </div>
+            
+            <div class="apply-recommendations-section">
+                <button id="applyRecommendationsBtn" class="button-primary">Apply All Recommendations</button>
+                <div class="help-text">This will modify your current payout structure based on the recommendations</div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Load external libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0/dist/chartjs-plugin-annotation.min.js"></script>
     
     <!-- Load our JavaScript modules -->
     <script src="js/calculations.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/scenarios.js"></script>
     <script src="js/exports.js"></script>
+    <script src="js/philosophy.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
